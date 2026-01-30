@@ -6,7 +6,7 @@ services:
   # OLTP DATABASE
   # ======================
   postgres_oltp:
-    image: postgres:15
+    image: postgres
     container_name: postgres_oltp
     environment:
       POSTGRES_DB: oltp_db
@@ -22,7 +22,7 @@ services:
   # DATA WAREHOUSE
   # ======================
   postgres_dwh:
-    image: postgres:15
+    image: postgres
     container_name: postgres_dwh
     environment:
       POSTGRES_DB: dwh_db
@@ -37,7 +37,7 @@ services:
   # AIRFLOW METADATA DB
   # ======================
   postgres_airflow:
-    image: postgres:15
+    image: postgres
     container_name: postgres_airflow
     environment:
       POSTGRES_DB: airflow_db
@@ -107,10 +107,10 @@ services:
   # ======================
   # IMAGE ANALYSIS API
   # ======================
-  image-api:
-    build: ./api
-    container_name: image_api
-    ports:
-      - "8000:8000"
-    environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+  # image-api:
+  #   build: ./api
+  #   container_name: image_api
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     OPENAI_API_KEY: ${OPENAI_API_KEY}
