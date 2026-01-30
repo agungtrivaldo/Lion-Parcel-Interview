@@ -1,0 +1,116 @@
+version: "3.9"
+
+services:
+
+  # ======================
+  # OLTP DATABASE
+  # ======================
+  postgres_oltp:
+    image: postgres:15
+    container_name: postgres_oltp
+    environment:
+      POSTGRES_DB: oltp_db
+      POSTGRES_USER: oltp_user
+      POSTGRES_PASSWORD: oltp_pass
+    volumes:
+      - ./volumes/oltp:/var/lib/postgresql/data
+      - ./db/oltp_init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+
+  # ======================
+  # DATA WAREHOUSE
+  # ======================
+  postgres_dwh:
+    image: postgres:15
+    container_name: postgres_dwh
+    environment:
+      POSTGRES_DB: dwh_db
+      POSTGRES_USER: dwh_user
+      POSTGRES_PASSWORD: dwh_pass
+    volumes:
+      - ./volumes/dwh:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  # ======================
+  # AIRFLOW METADATA DB
+  # ======================
+  postgres_airflow:
+    image: postgres:15
+    container_name: postgres_airflow
+    environment:
+      POSTGRES_DB: airflow_db
+      POSTGRES_USER: airflow_user
+      POSTGRES_PASSWORD: airflow_pass
+    volumes:
+      - ./volumes/airflow:/var/lib/postgresql/data
+
+  # ======================
+  # AIRFLOW INIT
+  # ======================
+  airflow-init:
+    image: apache/airflow:2.8.1-python3.10
+    container_name: airflow_init
+    depends_on:
+      - postgres_airflow
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_user:airflow_pass@postgres_airflow:5432/airflow_db
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    command: >
+      bash -c "
+      airflow db init &&
+      airflow users create
+        --username admin
+        --password admin
+        --firstname admin
+        --lastname admin
+        --role Admin
+        --email admin@example.com
+      "
+
+  # ======================
+  # AIRFLOW SCHEDULER
+  # ======================
+  airflow-scheduler:
+    build: ./airflow
+    container_name: airflow_scheduler
+    depends_on:
+      - airflow-init
+      - postgres_airflow
+      - postgres_oltp
+      - postgres_dwh
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_user:airflow_pass@postgres_airflow:5432/airflow_db
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    command: scheduler
+
+  # ======================
+  # AIRFLOW WEBSERVER
+  # ======================
+  airflow-webserver:
+    build: ./airflow
+    container_name: airflow_webserver
+    depends_on:
+      - airflow-scheduler
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_user:airflow_pass@postgres_airflow:5432/airflow_db
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    ports:
+      - "8080:8080"
+    command: webserver
+
+  # ======================
+  # IMAGE ANALYSIS API
+  # ======================
+  image-api:
+    build: ./api
+    container_name: image_api
+    ports:
+      - "8000:8000"
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
