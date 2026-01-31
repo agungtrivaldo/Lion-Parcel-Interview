@@ -57,6 +57,7 @@ services:
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_user:airflow_pass@postgres_airflow:5432/airflow_db
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'IDuTBGUhBX87tgM9ez-3bQXk8ciMOJPnRhgSf5c_HIs='
     command: >
       bash -c "airflow db init && airflow users create --username admin --password admin --firstname admin --lastname admin --role Admin --email admin@example.com"
 
@@ -74,6 +75,7 @@ services:
       - postgres_dwh
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_user:airflow_pass@postgres_airflow:5432/airflow_db
+      AIRFLOW__CORE__FERNET_KEY: 'IDuTBGUhBX87tgM9ez-3bQXk8ciMOJPnRhgSf5c_HIs='
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
     volumes:
       - ./airflow/dags:/opt/airflow/dags
@@ -90,6 +92,7 @@ services:
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_user:airflow_pass@postgres_airflow:5432/airflow_db
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'IDuTBGUhBX87tgM9ez-3bQXk8ciMOJPnRhgSf5c_HIs='
     ports:
       - "8081:8080"
     volumes:
