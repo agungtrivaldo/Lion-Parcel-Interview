@@ -55,7 +55,7 @@ with DAG(
         dwh = PostgresHook(postgres_conn_id="dwh_postgres")
 
         upsert_sql = """
-        INSERT INTO fact_retail_transactions (
+        INSERT INTO dwh_retail_transactions (
             id,
             customer_id,
             last_status,
