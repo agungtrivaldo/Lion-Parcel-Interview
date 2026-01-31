@@ -1,37 +1,31 @@
 from airflow import DAG
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.decorators import task
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from datetime import datetime, timedelta
 
-DEFAULT_ARGS = {
-    "depends_on_past": False,
+DAG_ID = "oltp_to_dwh_retail_transactions"
+
+default_args = {
+    "owner": "data-eng",
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
 
 with DAG(
-    dag_id="retail_transactions_hourly_etl",
-    default_args=DEFAULT_ARGS,
-    start_date=datetime(2026, 1, 1),
+    dag_id=DAG_ID,
+    start_date=datetime(2024, 1, 1),
     schedule_interval="@hourly",
     catchup=False,
-    tags=["oltp", "dwh", "incremental", "soft-delete"]
+    default_args=default_args,
+    tags=["etl", "oltp", "dwh"],
 ) as dag:
 
-    upsert_to_dwh = PostgresOperator(
-        task_id="upsert_retail_transactions",
-        postgres_conn_id="dwh_postgres",
-        sql="""
-        INSERT INTO dwh_retail_transactions (
-            id,
-            customer_id,
-            last_status,
-            pos_origin,
-            pos_destination,
-            created_at,
-            updated_at,
-            deleted_at
-        )
+    @task
+    def extract_from_oltp():
+        oltp = PostgresHook(postgres_conn_id="oltp_postgres")
+
+        sql = """
         SELECT
             id,
             customer_id,
@@ -42,19 +36,46 @@ with DAG(
             updated_at,
             deleted_at
         FROM retail_transactions
-        WHERE updated_at >= (
-            SELECT COALESCE(MAX(updated_at), '1970-01-01')
-            FROM dwh_retail_transactions
+        """
+
+        records = oltp.get_records(sql)
+        return records
+
+    @task
+    def load_to_dwh(records):
+        if not records:
+            return "No data to load"
+
+        dwh = PostgresHook(postgres_conn_id="dwh_postgres")
+
+        upsert_sql = """
+        INSERT INTO fact_retail_transactions (
+            id,
+            customer_id,
+            last_status,
+            pos_origin,
+            pos_destination,
+            created_at,
+            updated_at,
+            deleted_at
         )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (id)
         DO UPDATE SET
-            customer_id     = EXCLUDED.customer_id,
-            last_status     = EXCLUDED.last_status,
-            pos_origin      = EXCLUDED.pos_origin,
+            customer_id = EXCLUDED.customer_id,
+            last_status = EXCLUDED.last_status,
+            pos_origin = EXCLUDED.pos_origin,
             pos_destination = EXCLUDED.pos_destination,
-            updated_at      = EXCLUDED.updated_at,
-            deleted_at      = EXCLUDED.deleted_at;
+            created_at = EXCLUDED.created_at,
+            updated_at = EXCLUDED.updated_at,
+            deleted_at = EXCLUDED.deleted_at
         """
-    )
 
-    upsert_to_dwh
+        dwh.run(upsert_sql, parameters=records)
+
+        max_updated_at = max(r[6] for r in records)
+        Variable.set("retail_transactions_last_sync", str(max_updated_at))
+
+        return f"Upserted {len(records)} rows"
+
+    extract_from_oltp() >> load_to_dwh()
