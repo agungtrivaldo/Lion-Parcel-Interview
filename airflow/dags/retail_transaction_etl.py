@@ -77,7 +77,14 @@ with DAG(
             deleted_at = EXCLUDED.deleted_at
         """
 
-        dwh.run(upsert_sql, parameters=records)
+        conn = dwh.get_conn()
+        cur = conn.cursor()
+
+        cur.executemany(upsert_sql, records)
+        conn.commit()
+
+        cur.close()
+        conn.close()
 
         max_updated_at = max(r[6] for r in records)
         Variable.set("retail_transactions_last_sync", str(max_updated_at))
