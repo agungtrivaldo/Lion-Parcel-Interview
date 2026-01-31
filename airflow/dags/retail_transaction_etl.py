@@ -84,4 +84,5 @@ with DAG(
 
         return f"Upserted {len(records)} rows"
 
-    extract_from_oltp() >> load_to_dwh()
+    records = extract_from_oltp()
+    load_to_dwh(records)
