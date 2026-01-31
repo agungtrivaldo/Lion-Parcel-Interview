@@ -49,7 +49,7 @@ services:
   # ======================
   # AIRFLOW INIT
   # ======================
-  airflow-init:
+  airflow_init:
     image: apache/airflow:2.9.1
     container_name: airflow_init
     depends_on:
@@ -65,7 +65,7 @@ services:
   # ======================
   # AIRFLOW SCHEDULER
   # ======================
-  airflow-scheduler:
+  airflow_scheduler:
     image: apache/airflow:2.9.1
     container_name: airflow_scheduler
     depends_on:
@@ -85,7 +85,7 @@ services:
   # ======================
   # AIRFLOW WEBSERVER
   # ======================
-  airflow-webserver:
+  airflow_webserver:
     image: apache/airflow:2.9.1
     container_name: airflow-webserver
       - airflow-scheduler
