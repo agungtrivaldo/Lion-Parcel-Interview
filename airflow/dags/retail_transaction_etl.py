@@ -25,6 +25,11 @@ with DAG(
     def extract_from_oltp():
         oltp = PostgresHook(postgres_conn_id="oltp_postgres")
 
+        last_sync = Variable.get(
+            "retail_transactions_last_sync",
+            default_var="1970-01-01 00:00:00"
+        )
+
         sql = """
         SELECT
             id,
@@ -36,9 +41,10 @@ with DAG(
             updated_at,
             deleted_at
         FROM retail_transactions
+        WHERE updated_at > %s
         """
 
-        records = oltp.get_records(sql)
+        records = oltp.get_records(sql, parameters=(last_sync,))
         return records
 
     @task
