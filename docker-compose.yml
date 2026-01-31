@@ -77,6 +77,7 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
     volumes:
       - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
     command: scheduler
 
   # ======================
@@ -84,17 +85,19 @@ services:
   # ======================
   airflow-webserver:
     image: apache/airflow:2.9.1
-    container_name: airflow_webserver
+    container_name: airflow-webserver
     depends_on:
-      - airflow-scheduler
+      - postgres
     environment:
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_user:airflow_pass@postgres_airflow:5432/airflow_db
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    ports:
+      - "8081:8080"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
-    ports:
-      - "8080:8080"
-    command: webserver
+      - ./airflow/logs:/opt/airflow/logs
+    command: airflow webserver
+
 
   # ======================
   # IMAGE ANALYSIS API
