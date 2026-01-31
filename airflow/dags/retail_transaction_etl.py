@@ -3,6 +3,7 @@ from airflow.decorators import task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from datetime import datetime, timedelta
+from psycopg2.extras import execute_values
 
 DAG_ID = "oltp_to_dwh_retail_transactions"
 
@@ -53,6 +54,8 @@ with DAG(
             return "No data to load"
 
         dwh = PostgresHook(postgres_conn_id="dwh_postgres")
+        conn = dwh.get_conn()
+        cur = conn.cursor()
 
         upsert_sql = """
         INSERT INTO dwh_retail_transactions (
@@ -64,8 +67,7 @@ with DAG(
             created_at,
             updated_at,
             deleted_at
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES %s
         ON CONFLICT (id)
         DO UPDATE SET
             customer_id = EXCLUDED.customer_id,
@@ -77,10 +79,7 @@ with DAG(
             deleted_at = EXCLUDED.deleted_at
         """
 
-        conn = dwh.get_conn()
-        cur = conn.cursor()
-
-        cur.executemany(upsert_sql, records)
+        execute_values(cur, upsert_sql, records)
         conn.commit()
 
         cur.close()
@@ -90,6 +89,5 @@ with DAG(
         Variable.set("retail_transactions_last_sync", str(max_updated_at))
 
         return f"Upserted {len(records)} rows"
-
     records = extract_from_oltp()
     load_to_dwh(records)
