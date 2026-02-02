@@ -14,7 +14,6 @@ services:
       POSTGRES_PASSWORD: oltp_pass
     volumes:
       - ./volumes/oltp:/var/lib/postgresql/data
-      - ./db/oltp_init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
 
@@ -109,15 +108,3 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
     command: webserver
-
-
-  # ======================
-  # IMAGE ANALYSIS API
-  # ======================
-  # image-api:
-  #   build: ./api
-  #   container_name: image_api
-  #   ports:
-  #     - "8000:8000"
-  #   environment:
-  #     OPENAI_API_KEY: ${OPENAI_API_KEY}
