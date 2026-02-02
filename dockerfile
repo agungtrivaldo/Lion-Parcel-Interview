@@ -13,7 +13,6 @@ USER airflow
 
 # Copy DAGs dan scripts
 COPY airflow/dags /opt/airflow/dags
-COPY init_db /opt/airflow/init_db
 
 # Set environment variables
 ENV AIRFLOW__CORE__EXECUTOR=LocalExecutor
